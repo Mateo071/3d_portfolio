@@ -28,19 +28,77 @@ export const Island = ({ isRotating, setIsRotating, ...props }) => {
     e.stopPropagation();
     e.preventDefault();
     setIsRotating(true);
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+
+    lastX.current = clientX;
   }
 
-  const handlePointerDown = (e) => {
+  const handlePointerUp = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    setIsRotating(true);
+    setIsRotating(false);
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+
+    const delta = (clientX - lastX.current) / viewport.width;
+
+    islandRef.current.rotation.y += delta * 0.01 * Math.PI;
+    lastX.current = clientX;
+    rotationSpeed.current = delta * 0.01 * Math.PI;
   }
-  
-  const handlePointerDown = (e) => {
+
+  const handlePointerMove = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    setIsRotating(true);
+
+    if (isRotating) handlePointerUp(e);
   }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowLeft') {
+      if (!isRotating) setIsRotating(true);
+      islandRef.current.rotation.y += 0.01 * Math.PI;
+    } else if (e.key === 'ArrowRight') {
+      if (!isRotating) setIsRotating(true);
+      islandRef.current.rotation.y -= 0.01 * Math.PI;
+    }
+  }
+
+  const handleKeyUp = (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      setIsRotating(false);
+    }
+  }
+
+  useFrame(() => {
+    if (!isRotating) {
+      rotationSpeed.current *= dampingFactor;
+
+      if (Math.abs(rotationSpeed.current) < 0.001) {
+        rotationSpeed.current = 0;
+      }
+    } else {
+      const rotation = islandRef.current.rotation.y;
+    }
+  })
+
+  useEffect(() => {
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('keydown', handlePointerUp);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    }
+  }, [gl, handlePointerDown, handlePointerUp, handlePointerMove]);
 
   return (
     <a.group ref={islandRef} {...props}>
